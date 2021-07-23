@@ -1,4 +1,4 @@
-final String tableUser = 'user';
+final String tableUser = 'User';
 final String columnId = 'id';
 final String columnName = 'name';
 final String columnPhone = 'phone';

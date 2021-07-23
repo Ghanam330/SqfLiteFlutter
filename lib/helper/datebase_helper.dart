@@ -7,7 +7,6 @@ class DataHelper {
   DataHelper._();
 
   static final DataHelper db =DataHelper._();
-
   static Database _database;
 
   Future<Database> get database async {
@@ -19,7 +18,7 @@ class DataHelper {
   }
 
   initDb() async {
-    String path = join(await getDatabasesPath(), "UserData.db");
+    String path = join(await getDatabasesPath(), 'UserData.db');
    return await openDatabase(path, version: 1,
         onCreate: (Database db, int version) async {
       await db.execute('''
@@ -31,20 +30,30 @@ class DataHelper {
       }
       ''');
     });
+//
   }
 
-  insertUser(UserModel user) async {
+ Future<UserModel>insertUser(UserModel user) async {
     var dbClient = await database;
 
-    await dbClient.insert(tableUser, user.toJson(),
+    await dbClient.insert(
+        tableUser,
+        user.toJson(),
         conflictAlgorithm: ConflictAlgorithm.replace);
+    return user;
   }
+
 
   updateUser(UserModel user) async {
+
     var dbClient = await database;
 
- await dbClient.update(tableUser, user.toJson(),
-        where: '$columnId = ?', whereArgs: [user.id]);
+ await dbClient.update(
+     tableUser,
+     user.toJson(),
+        where: '$columnId = ?',
+     whereArgs: [user.id]
+ );
   }
 
 
@@ -67,6 +76,7 @@ class DataHelper {
     var dbClient = await database;
 
     List<Map> maps = await dbClient.query(tableUser);
+
     return maps.isNotEmpty
         ? maps.map((user) => UserModel.fromJson(user)).toList()
         : [];
@@ -75,6 +85,7 @@ class DataHelper {
 
   Future<void>deleteUser(int id)async{
     var dbClient =await database;
+
     return await dbClient.delete(tableUser,
       where: '$columnId = ?',
       whereArgs: [id],

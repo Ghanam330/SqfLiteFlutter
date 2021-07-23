@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:sqfliteyotubenotaapp/helper/datebase_helper.dart';
 import 'package:sqfliteyotubenotaapp/model/user_model.dart';
-
 
 class HomeView extends StatefulWidget {
   @override
@@ -13,6 +13,8 @@ class _HomeViewState extends State<HomeView> {
 
   String name, phone, email;
 
+  bool flag= false;
+
   GlobalKey<FormState> _key = GlobalKey<FormState>();
 
   @override
@@ -20,16 +22,12 @@ class _HomeViewState extends State<HomeView> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.red,
-        title: Center(
-            child: Text("Contacts")
-        ),
+        title: Center(child: Text("Contacts")),
       ),
       body: getAllUser(),
       floatingActionButton: _buildFloatingActionButton(context),
     );
   }
-
-
 
   getAllUser() {
     return FutureBuilder(
@@ -38,10 +36,11 @@ class _HomeViewState extends State<HomeView> {
           return createListView(context, snapshot);
         });
   }
+
   Future<List<UserModel>> _getData() async {
     var dbHelper = DataHelper.db;
 
-   await dbHelper.getAllUser().then((value) {
+    await dbHelper.getAllUser().then((value) {
       userlist = value;
     });
     return userlist;
@@ -54,7 +53,16 @@ class _HomeViewState extends State<HomeView> {
       return ListView.builder(
           itemCount: userlist.length,
           itemBuilder: (context, index) {
-            return _buildItem(userlist[index],index);
+            return Dismissible(
+              background: Container(
+                color: Colors.red,
+              ),
+              key: UniqueKey(),
+                onDismissed: (directions){
+                DataHelper.db.deleteUser(userlist[index].id);
+                },
+                child: _buildItem(userlist[index], index),
+            );
           });
     } else {
       return Container();
@@ -64,14 +72,25 @@ class _HomeViewState extends State<HomeView> {
   _buildFloatingActionButton(BuildContext context) {
     return FloatingActionButton(
       onPressed: () {
-        openAlertBox(context);
+        openAlertBox(context, null);
       },
       backgroundColor: Colors.deepOrangeAccent,
       child: Icon(Icons.add),
     );
   }
 
-  openAlertBox(BuildContext context) {
+  openAlertBox(BuildContext context, UserModel model) {
+    if(model != null){
+flag=true;
+      name=model.name;
+      phone=model.phone;
+      email=model.email;
+    }else{
+      flag=false;
+      name='';
+      phone='';
+      email='';
+    }
     return showDialog<void>(
         builder: (context) {
           return AlertDialog(
@@ -129,9 +148,12 @@ class _HomeViewState extends State<HomeView> {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        addUser(context);
+                    flag ? editUser(model.id) : addUser(context);
                       },
-                      child: Text("Add User"),
+                      child: Text(
+                       flag ? "Edit User" :  "Add User"
+
+                      ),
                     )
                   ],
                 ),
@@ -141,22 +163,37 @@ class _HomeViewState extends State<HomeView> {
         },
         context: context);
   }
-  void addUser(context)async {
+
+  addUser(context) async {
     _key.currentState.save();
     var dbHelper = DataHelper.db;
     dbHelper
         .insertUser(UserModel(name: name, phone: phone, email: email))
-        .then((value){
+        .then((value) {
+      Navigator.pop(context);
+      setState(() {});
+    });
+  }
+
+  editUser(int id) async {
+    _key.currentState.save();
+    var dbHelper = DataHelper.db;
+    UserModel user =UserModel(
+      id: id,name: name,phone: phone,email: email,
+    );
+    dbHelper
+        .updateUser(user)
+        .then((value) {
       Navigator.pop(context);
       setState(() {
-
+        flag =false;
       });
     });
   }
 
   _buildItem(UserModel model, int index) {
     return Card(
-      child:ListTile(
+      child: ListTile(
         title: Row(
           children: [
             Column(
@@ -165,11 +202,8 @@ class _HomeViewState extends State<HomeView> {
                   child: CircleAvatar(
                     radius: 30,
                     child: Text(
-                      model.name.substring(0,1).toLowerCase(),
-                      style: TextStyle(
-                          fontSize: 35,
-                          color: Colors.white
-                      ),
+                      model.name.substring(0, 1).toLowerCase(),
+                      style: TextStyle(fontSize: 35, color: Colors.white),
                     ),
                   ),
                 )
@@ -184,15 +218,11 @@ class _HomeViewState extends State<HomeView> {
               children: [
                 Row(
                   children: [
-                    Icon(
-                        Icons.account_circle
-                    ),
+                    Icon(Icons.account_circle),
                     Padding(padding: EdgeInsets.only(right: 10)),
-                    Text(model.name,
-                      style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.black
-                      ),
+                    Text(
+                      model.name,
+                      style: TextStyle(fontSize: 18, color: Colors.black),
                       softWrap: true,
                       maxLines: 2,
                     ),
@@ -203,15 +233,11 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 Row(
                   children: [
-                    Icon(
-                        Icons.phone
-                    ),
+                    Icon(Icons.phone),
                     Padding(padding: EdgeInsets.only(right: 10)),
-                    Text(model.phone,
-                      style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.black
-                      ),
+                    Text(
+                      model.phone,
+                      style: TextStyle(fontSize: 18, color: Colors.black),
                       softWrap: true,
                       maxLines: 2,
                     ),
@@ -222,15 +248,11 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 Row(
                   children: [
-                    Icon(
-                        Icons.email
-                    ),
+                    Icon(Icons.email),
                     Padding(padding: EdgeInsets.only(right: 10)),
-                    Text(model.email,
-                      style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.black
-                      ),
+                    Text(
+                      model.email,
+                      style: TextStyle(fontSize: 18, color: Colors.black),
                       softWrap: true,
                       maxLines: 2,
                     ),
@@ -243,20 +265,17 @@ class _HomeViewState extends State<HomeView> {
         trailing: Padding(
           padding: const EdgeInsets.only(top: 30),
           child: IconButton(
-            onPressed: (){
-
+            onPressed: () {
+              _onEdit(model, index);
             },
             icon: Icon(Icons.edit),
           ),
         ),
-      ) ,
+      ),
     );
   }
 
-
-
-
-
-
-
+  _onEdit(UserModel model, int index) {
+    openAlertBox(context, model);
+  }
 }
